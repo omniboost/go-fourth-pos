@@ -9,8 +9,10 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
+	"net/textproto"
 	"net/url"
 	"path"
 	"strings"
@@ -163,26 +165,85 @@ func (c *Client) GetEndpointURL(relative string, pathParams PathParams) url.URL 
 }
 
 func (c *Client) NewRequest(ctx context.Context, req Request) (*http.Request, error) {
-	var body io.Reader
+	var contentType string
+
+	// convert body struct to json
+	buf := new(bytes.Buffer)
+
 	if req.RequestBodyInterface() != nil {
+		// Request has a method that returns a request body
 		if r, ok := req.RequestBodyInterface().(io.Reader); ok {
-			body = r
-		} else if bb, ok := req.RequestBodyInterface().([]byte); ok {
-			body = bytes.NewReader(bb)
+			// request body is a io.Reader
+			_, err := io.Copy(buf, r)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			buf := new(bytes.Buffer)
+			// request body is a struct/slice; marshal to json
 			err := json.NewEncoder(buf).Encode(req.RequestBodyInterface())
 			if err != nil {
 				return nil, err
 			}
-			body = buf
+		}
+	} else if i, ok := req.(interface{ FormParamsInterface() Form }); ok {
+		if i.FormParamsInterface().IsMultiPart() {
+			// @TODO implement this as RequestBodyInterface()
+			// Request has a form as body
+			var err error
+			w := multipart.NewWriter(buf)
+
+			for k, f := range i.FormParamsInterface().Files() {
+				var part io.Writer
+				if x, ok := f.Content.(io.Closer); ok {
+					defer x.Close()
+				}
+
+				if part, err = CreateFormFile(w, f.Content, k, f.Filename); err != nil {
+					return nil, err
+				}
+
+				if _, err = io.Copy(part, f.Content); err != nil {
+					return nil, err
+				}
+			}
+
+			for k := range i.FormParamsInterface().Values() {
+				var part io.Writer
+
+				// Add other fields
+				if part, err = w.CreateFormField(k); err != nil {
+					return nil, err
+				}
+
+				fv := strings.NewReader(i.FormParamsInterface().Values().Get(k))
+				if _, err = io.Copy(part, fv); err != nil {
+					return nil, err
+				}
+			}
+
+			// Don't forget to close the multipart writer.
+			// If you don't close it, your request will be missing the terminating boundary.
+			w.Close()
+
+			// Don't forget to set the content type, this will contain the boundary.
+			contentType = w.FormDataContentType()
+
+		} else {
+			buf.WriteString(i.FormParamsInterface().Values().Encode())
 		}
 	}
 
-	r, err := http.NewRequest(req.Method(), req.URL().String(), body)
+	// create new http request
+	r, err := http.NewRequest(req.Method(), req.URL().String(), buf)
 	if err != nil {
 		return nil, err
 	}
+
+	// values := url.Values{}
+	// err = utils.AddURLValuesToRequest(values, req, true)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// optionally pass along context
 	if ctx != nil {
@@ -190,10 +251,13 @@ func (c *Client) NewRequest(ctx context.Context, req Request) (*http.Request, er
 	}
 
 	// set other headers
-	r.Header.Add("Content-Type", fmt.Sprintf("%s; charset=%s", c.MediaType(), c.Charset()))
+	if contentType != "" {
+		r.Header.Add("Content-Type", contentType)
+	} else {
+		r.Header.Add("Content-Type", fmt.Sprintf("%s; charset=%s", c.MediaType(), c.Charset()))
+	}
 	r.Header.Add("Accept", c.MediaType())
 	r.Header.Add("User-Agent", c.UserAgent())
-	// r.Header.Add("X-AUTH-TOKEN", c.Token())
 
 	return r, nil
 }
@@ -453,4 +517,41 @@ func checkContentType(response *http.Response) error {
 	}
 
 	return nil
+}
+
+func CreateFormFile(w *multipart.Writer, data io.Reader, fieldname, filename string) (io.Writer, error) {
+	var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+
+	escapeQuotes := func(s string) string {
+		return quoteEscaper.Replace(s)
+	}
+
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
+			escapeQuotes(fieldname), escapeQuotes(filename)))
+
+	// contentType, err := GetFileContentType(data)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	h.Set("Content-Type", "text/csv")
+	return w.CreatePart(h)
+}
+
+func GetFileContentType(file io.Reader) (string, error) {
+
+	// Only the first 512 bytes are used to sniff the content type.
+	buffer := make([]byte, 512)
+
+	_, err := file.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+
+	// Use the net/http package's handy DectectContentType function. Always returns a valid
+	// content-type by returning "application/octet-stream" if no others seemed to match.
+	contentType := http.DetectContentType(buffer)
+
+	return contentType, nil
 }
