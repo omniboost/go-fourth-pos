@@ -6,6 +6,8 @@ github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+l
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
 github.com/joefitzgerald/passwordcredentials v0.3.0 h1:d4+dAQ9ZnRQzzs+M9nfDBoS1zrl3Z9POPOb3nSAh/vg=
 github.com/joefitzgerald/passwordcredentials v0.3.0/go.mod h1:820sDM9Ww+d67iG5XH4DERZKmmh1dUeCvFntg2uw5o8=
+github.com/omniboost/gocsv v0.0.0-20230406101422-6445c2b15027 h1:EDmWw546b47ddkN79X82tDRSK2Ep/nHjB9fBpUvxCu8=
+github.com/omniboost/gocsv v0.0.0-20230406101422-6445c2b15027/go.mod h1:5YoVOkjYAQumqlV356Hj3xeYh4BdZuLE0/nRkf2NKkI=
 github.com/omniboost/schema v1.1.1-0.20211111150515-2e872025e306 h1:9GMWNGwzd6895ErDvWeIipKuaEQ+0l3thaLm89u+El8=
 github.com/omniboost/schema v1.1.1-0.20211111150515-2e872025e306/go.mod h1:p/BKiaWM4vXHpCIdM2HAnmxb+3q95jb2KwvX9bK1OoY=
 golang.org/x/oauth2 v0.28.0 h1:CrgCKl8PPAVtLnU3c+EDw6x11699EWlsDeWNWKdIOkc=
