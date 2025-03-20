@@ -98,6 +98,12 @@ func (d Time) MarshalSchema() string {
 	return d.Time.Format("15:04:05")
 }
 
+// Convert the internal date as CSV string
+func (d Time) MarshalCSV() (string, error) {
+	// check if time implement the Stringer() interface
+	return d.Time.Format("15:04:05"), nil
+}
+
 // func (d *DateTime) UnmarshalJSON(text []byte) (err error) {
 // 	var value string
 // 	err = json.Unmarshal(text, &value)
