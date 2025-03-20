@@ -7,7 +7,7 @@ type TransactionDatasetRow struct {
 	UnitID               string   `csv:"unitid"`
 	SiteLocationCode     string   `csv:"sitelocationcode"`
 	TradingDate          DateTime `csv:"tradingdate"`
-	Time                 DateTime `csv:"time"`
+	Time                 Time     `csv:"time"`
 	Timefact             string   `csv:"timefact"`
 	TerminalCode         string   `csv:"terminalcode"`
 	TerminalDesc         string   `csv:"terminaldesc"`
@@ -60,8 +60,8 @@ type TransactionDatasetRow struct {
 	BumpTime             string   `csv:"bumptime"`
 	UniversalTimesLotID  string   `csv:"universaltimeslotid"`
 	TimeslotDesc         string   `csv:"timeslotdesc"`
-	TransactionStartEnd  string   `csv:"transactionstartend"`
-	IsDeleted            string   `csv:"isdeleted"`
+	TransactionStartEnd  int   `csv:"transactionstartend"`
+	IsDeleted            int      `csv:"isdeleted"`
 	CustomField1         string   `csv:"customfield1"`
 	CustomField2         string   `csv:"customfield2"`
 	CustomField3         string   `csv:"customfield3"`
